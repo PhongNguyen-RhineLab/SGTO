@@ -1,0 +1,479 @@
+{
+  "random_search": {
+    "metrics": {
+      "F_rob": -3651.738896197043,
+      "F_rob_gain": 484.87038005295653,
+      "F_mean": -2682.6159809679134,
+      "F_worst": -3130.4269707278363,
+      "CVaR_loss": 3230.4097174304306,
+      "fulfillment_ratio": 0.10283882357786,
+      "peak_coverage_ratio": 0.05421816719918983,
+      "grid_overload_total_kW": 16070.178871724898,
+      "grid_overload_max_kW": 2336.1800416666665,
+      "unmet_demand_kWh": 1380710.6541150534,
+      "synergy": 1.0,
+      "cost": 4980.0,
+      "n_stations": 9,
+      "runtime_s": 0.22,
+      "n_evals": 8000
+    },
+    "solution": [
+      [
+        "107",
+        "large"
+      ],
+      [
+        "226",
+        "small"
+      ],
+      [
+        "584",
+        "large"
+      ],
+      [
+        "633",
+        "small"
+      ],
+      [
+        "967",
+        "large"
+      ],
+      [
+        "975",
+        "large"
+      ],
+      [
+        "1076",
+        "large"
+      ],
+      [
+        "1156",
+        "small"
+      ],
+      [
+        "1163",
+        "medium"
+      ]
+    ],
+    "history": []
+  },
+  "cost_aware_greedy": {
+    "metrics": {
+      "F_rob": -3447.8112535978407,
+      "F_rob_gain": 688.7980226521586,
+      "F_mean": -2524.1422240056268,
+      "F_worst": -2958.103969636557,
+      "CVaR_loss": 3078.896765307379,
+      "fulfillment_ratio": 0.14368983489545806,
+      "peak_coverage_ratio": 0.062416857428484566,
+      "grid_overload_total_kW": 178.99084888581788,
+      "grid_overload_max_kW": 807.1239583333336,
+      "unmet_demand_kWh": 1317841.8764194802,
+      "synergy": 2.0,
+      "cost": 4980.0,
+      "n_stations": 9,
+      "runtime_s": 5.3,
+      "n_evals": 217560
+    },
+    "solution": [
+      [
+        "705",
+        "large"
+      ],
+      [
+        "965",
+        "large"
+      ],
+      [
+        "1011",
+        "large"
+      ],
+      [
+        "1095",
+        "large"
+      ],
+      [
+        "1110",
+        "medium"
+      ],
+      [
+        "1124",
+        "large"
+      ],
+      [
+        "1149",
+        "small"
+      ],
+      [
+        "1154",
+        "small"
+      ],
+      [
+        "1156",
+        "small"
+      ]
+    ],
+    "history": []
+  },
+  "greedy_one_exchange": {
+    "metrics": {
+      "F_rob": -3442.483945832246,
+      "F_rob_gain": 694.1253304177535,
+      "F_mean": -2519.2899760934833,
+      "F_worst": -2957.8511344415006,
+      "CVaR_loss": 3077.313232462541,
+      "fulfillment_ratio": 0.14537139921566217,
+      "peak_coverage_ratio": 0.062407604716733615,
+      "grid_overload_total_kW": 109.75761096264478,
+      "grid_overload_max_kW": 807.1239583333336,
+      "unmet_demand_kWh": 1315253.9871599998,
+      "synergy": 2.0,
+      "cost": 4980.0,
+      "n_stations": 9,
+      "runtime_s": 15.71,
+      "n_evals": 858720
+    },
+    "solution": [
+      [
+        "705",
+        "large"
+      ],
+      [
+        "795",
+        "large"
+      ],
+      [
+        "1011",
+        "large"
+      ],
+      [
+        "1095",
+        "large"
+      ],
+      [
+        "1110",
+        "medium"
+      ],
+      [
+        "1124",
+        "large"
+      ],
+      [
+        "1149",
+        "small"
+      ],
+      [
+        "1154",
+        "small"
+      ],
+      [
+        "1156",
+        "small"
+      ]
+    ],
+    "history": []
+  },
+  "sgto_no_exchange": {
+    "metrics": {
+      "F_rob": -3447.8112535978407,
+      "F_rob_gain": 688.7980226521586,
+      "F_mean": -2524.1422240056268,
+      "F_worst": -2958.103969636557,
+      "CVaR_loss": 3078.896765307379,
+      "fulfillment_ratio": 0.14368983489545806,
+      "peak_coverage_ratio": 0.062416857428484566,
+      "grid_overload_total_kW": 178.99084888581788,
+      "grid_overload_max_kW": 807.1239583333336,
+      "unmet_demand_kWh": 1317841.8764194802,
+      "synergy": 2.0,
+      "cost": 4980.0,
+      "n_stations": 9,
+      "runtime_s": 6.37,
+      "n_evals": 257224
+    },
+    "solution": [
+      [
+        "705",
+        "large"
+      ],
+      [
+        "965",
+        "large"
+      ],
+      [
+        "1011",
+        "large"
+      ],
+      [
+        "1095",
+        "large"
+      ],
+      [
+        "1110",
+        "medium"
+      ],
+      [
+        "1124",
+        "large"
+      ],
+      [
+        "1149",
+        "small"
+      ],
+      [
+        "1154",
+        "small"
+      ],
+      [
+        "1156",
+        "small"
+      ]
+    ],
+    "history": [
+      {
+        "iter": -1,
+        "stage": "init",
+        "f_val": -3460.789869811059,
+        "cost": 4980.0,
+        "size": 9
+      },
+      {
+        "iter": 0,
+        "f_val": -3495.5041658258497,
+        "accepted": false,
+        "cost": 4980.0,
+        "size": 9
+      },
+      {
+        "iter": 1,
+        "f_val": -3495.5041658258497,
+        "accepted": false,
+        "cost": 4980.0,
+        "size": 9
+      },
+      {
+        "iter": 2,
+        "f_val": -3480.437652153758,
+        "accepted": false,
+        "cost": 4980.0,
+        "size": 9
+      }
+    ]
+  },
+  "sgto_risk_neutral": {
+    "metrics": {
+      "F_rob": -3400.1481641745368,
+      "F_rob_gain": 736.4611120754626,
+      "F_mean": -2485.398377125325,
+      "F_worst": -2917.6081313801774,
+      "CVaR_loss": 3049.165956830705,
+      "fulfillment_ratio": 0.15293099629558413,
+      "peak_coverage_ratio": 0.068058461611523,
+      "grid_overload_total_kW": 119.40727092593954,
+      "grid_overload_max_kW": 639.9923749999998,
+      "unmet_demand_kWh": 1303619.9391167148,
+      "synergy": 2.0,
+      "cost": 4980.0,
+      "n_stations": 9,
+      "runtime_s": 41.45,
+      "n_evals": 2220296
+    },
+    "solution": [
+      [
+        "202",
+        "medium"
+      ],
+      [
+        "326",
+        "large"
+      ],
+      [
+        "528",
+        "large"
+      ],
+      [
+        "705",
+        "large"
+      ],
+      [
+        "795",
+        "large"
+      ],
+      [
+        "1011",
+        "large"
+      ],
+      [
+        "1149",
+        "small"
+      ],
+      [
+        "1154",
+        "small"
+      ],
+      [
+        "1156",
+        "small"
+      ]
+    ],
+    "history": [
+      {
+        "iter": -1,
+        "stage": "init",
+        "f_val": -2528.54933694657,
+        "cost": 4980.0,
+        "size": 9
+      },
+      {
+        "iter": 0,
+        "f_val": -2473.801177514919,
+        "accepted": true,
+        "cost": 4980.0,
+        "size": 9
+      },
+      {
+        "iter": 1,
+        "f_val": -2473.878491511371,
+        "accepted": false,
+        "cost": 4980.0,
+        "size": 9
+      },
+      {
+        "iter": 2,
+        "f_val": -2473.636294787851,
+        "accepted": true,
+        "cost": 4980.0,
+        "size": 9
+      },
+      {
+        "iter": 3,
+        "f_val": -2473.878491511371,
+        "accepted": false,
+        "cost": 4980.0,
+        "size": 9
+      },
+      {
+        "iter": 4,
+        "f_val": -2473.636294787851,
+        "accepted": false,
+        "cost": 4980.0,
+        "size": 9
+      },
+      {
+        "iter": 5,
+        "f_val": -2473.878491511371,
+        "accepted": false,
+        "cost": 4980.0,
+        "size": 9
+      }
+    ]
+  },
+  "sgto": {
+    "metrics": {
+      "F_rob": -3400.1481641745368,
+      "F_rob_gain": 736.4611120754626,
+      "F_mean": -2485.398377125325,
+      "F_worst": -2917.6081313801774,
+      "CVaR_loss": 3049.165956830705,
+      "fulfillment_ratio": 0.15293099629558413,
+      "peak_coverage_ratio": 0.068058461611523,
+      "grid_overload_total_kW": 119.40727092593954,
+      "grid_overload_max_kW": 639.9923749999998,
+      "unmet_demand_kWh": 1303619.9391167148,
+      "synergy": 2.0,
+      "cost": 4980.0,
+      "n_stations": 9,
+      "runtime_s": 38.89,
+      "n_evals": 2092120
+    },
+    "solution": [
+      [
+        "202",
+        "medium"
+      ],
+      [
+        "326",
+        "large"
+      ],
+      [
+        "528",
+        "large"
+      ],
+      [
+        "705",
+        "large"
+      ],
+      [
+        "795",
+        "large"
+      ],
+      [
+        "1011",
+        "large"
+      ],
+      [
+        "1149",
+        "small"
+      ],
+      [
+        "1154",
+        "small"
+      ],
+      [
+        "1156",
+        "small"
+      ]
+    ],
+    "history": [
+      {
+        "iter": -1,
+        "stage": "init",
+        "f_val": -3460.789869811059,
+        "cost": 4980.0,
+        "size": 9
+      },
+      {
+        "iter": 0,
+        "f_val": -3394.185264866882,
+        "accepted": true,
+        "cost": 4980.0,
+        "size": 9
+      },
+      {
+        "iter": 1,
+        "f_val": -3394.0616535414865,
+        "accepted": true,
+        "cost": 4980.0,
+        "size": 9
+      },
+      {
+        "iter": 2,
+        "f_val": -3393.9459092788147,
+        "accepted": true,
+        "cost": 4980.0,
+        "size": 9
+      },
+      {
+        "iter": 3,
+        "f_val": -3394.0616535414865,
+        "accepted": false,
+        "cost": 4980.0,
+        "size": 9
+      },
+      {
+        "iter": 4,
+        "f_val": -3393.9459092788147,
+        "accepted": false,
+        "cost": 4980.0,
+        "size": 9
+      },
+      {
+        "iter": 5,
+        "f_val": -3394.0616535414865,
+        "accepted": false,
+        "cost": 4980.0,
+        "size": 9
+      }
+    ]
+  }
+}
