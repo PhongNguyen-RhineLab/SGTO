@@ -71,6 +71,33 @@ def local_exchange(inst, rm, X: set, scenarios, eps: float,
 
         if not improved:
             break
+
+    # --- drop-and-refill, once after exchange converges -----------------
+    # One-exchange cannot trade one expensive element for several cheap
+    # ones (or vice versa). Dropping the weakest elements and greedily
+    # respending the freed budget covers 1-to-many moves. Runs once, on
+    # the k weakest elements by removal gain, to bound cost (running it
+    # inside every pass made large-budget instances intractable).
+    from algorithms.greedy import greedy_fill  # local import, no cycle
+    k_worst = 2
+    if state.X:
+        rem_gain = {e: state.gain_remove(e) for e in state.X}
+        if counter is not None:
+            counter[0] += 3 * len(scenarios) * len(state.X)
+        worst = sorted(rem_gain, key=rem_gain.get)[:k_worst]
+        for e in worst:
+            if e not in state.X:
+                continue
+            base = state.f_rob()
+            trial = set(state.X)
+            trial.discard(e)
+            trial = greedy_fill(inst, rm, scenarios, X0=trial,
+                                counter=counter)
+            val = IncrementalState(rm, scenarios, X=trial).f_rob()
+            if counter is not None:
+                counter[0] += len(scenarios)
+            if val > base + eps:
+                state = IncrementalState(rm, scenarios, X=trial)
     return state.X
 
 

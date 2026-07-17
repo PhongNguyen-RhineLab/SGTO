@@ -19,12 +19,16 @@ from metrics import evaluate, describe_solution
 from algorithms.greedy import CostAwareGreedy
 from algorithms.local_search import GreedyWithExchange
 from algorithms.random_search import RandomSearch
+from algorithms.annealing import SimulatedAnnealing
 from algorithms.sgto import SGTO
+from algorithms.annealing import SimulatedAnnealing
 
 
 def make_solvers(inst, rm, cfg, names=None):
     all_solvers = {
         "random_search": lambda: RandomSearch(inst, rm, cfg.algo),
+        "simulated_annealing": lambda: SimulatedAnnealing(inst, rm, cfg.algo),
+        "simulated_annealing": lambda: SimulatedAnnealing(inst, rm, cfg.algo),
         "cost_aware_greedy": lambda: CostAwareGreedy(inst, rm, cfg.algo),
         "greedy_one_exchange": lambda: GreedyWithExchange(inst, rm, cfg.algo),
         "sgto_no_exchange": lambda: SGTO(inst, rm, cfg.algo,

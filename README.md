@@ -94,6 +94,74 @@ evaluation never see training days.
 - Metrics report F_rob_gain = F_rob(X) - F_rob(empty), since unserved
   baseline demand makes raw F_rob a large negative constant.
 
+## Algorithm and performance upgrades (session 3)
+
+- Dual-rule greedy: runs benefit-to-cost AND pure-gain greedy, keeps
+  the better (guards against the known failure mode of ratio greedy
+  with heterogeneous costs; carries the classic budgeted-max-coverage
+  style guarantee).
+- Local exchange gained a drop-and-refill move: drop one of the k=3
+  weakest elements and greedily respend the freed budget, covering
+  1-to-many trades that single exchanges cannot express.
+- SGTO is now iterated local search: on validation rejection it
+  perturbs the incumbent (drop perturb_frac of elements, greedy refill)
+  instead of terminating, tracks the best-so-far validated solution,
+  and finishes with a local-exchange polish on the full training set.
+  patience=1, perturb_frac=0, final_polish=False recovers the paper's
+  Algorithm 1 exactly; if the extensions are kept, the algorithm
+  section needs a short paragraph.
+- Simulated annealing baseline implemented (algorithms/annealing.py).
+- Evaluator rewritten (model/reward.py): scenario tensors are stacked
+  and marginal gains use component deltas on slices (a candidate only
+  touches its own grid region and the ~18 zones it covers). ~6-7x
+  faster per gain, verified bit-identical to the reference
+  implementation kept in model/reward_reference.py. End to end: full
+  SGTO 53s -> 9.5s, and budget-12000 runs that previously timed out
+  finish in under a minute.
+
+## Optimality evidence at the default operating point
+
+At budget 5000 the instance appears ceiling-bound: aggressive SGTO
+(40 iters, 50 percent perturbation, patience 12) and a 12000-move SA
+run from random init both fail to beat the same solution SGTO finds in
+10 seconds (val -3393.95). The greedy -> SGTO gap (gain 689 -> 736,
++6.9 percent) is the headline comparison. At budget 12000 SGTO
+additionally cuts max grid overload from 2607 to 1841 kW vs greedy.
+
+## Algorithm upgrades (session 3)
+
+- Vectorized reward evaluation: scenario data is stacked into tensors
+  in IncrementalState (coverage collapses to one (M,U) product since
+  w_t and demand factor out of the solution term). ~6x faster per
+  marginal gain, bit-identical to the reference implementation kept in
+  model/reward_reference.py. This is what makes larger budgets (more
+  stations, bigger neighborhoods) tractable.
+- Dual-rule greedy: best of ratio-greedy and gain-greedy (classic fix
+  for the budgeted-coverage failure mode of the pure ratio rule).
+- Drop-and-refill move in local exchange: one-exchange cannot trade one
+  expensive element for several cheap ones; dropping the weakest
+  elements and greedily respending the budget covers 1-to-many moves.
+  Runs once after the exchange passes converge (running it inside every
+  pass made large budgets intractable).
+- SGTO is now iterated local search: on validation rejection it
+  perturbs the incumbent (drop perturb_frac of elements, greedy refill)
+  instead of terminating, tracks the best-so-far validated solution,
+  and optionally polishes on the full train set at the end. Setting
+  patience=1, perturb_frac=0, final_polish=False recovers the paper's
+  Algorithm 1 exactly; if the extensions are kept, the algorithm
+  section needs a short paragraph describing them.
+- Simulated annealing baseline implemented (algorithms/annealing.py);
+  also used as an independent check.
+
+Evidence at budget 12000 (single seed): greedy gain 1446.2, paper-rule
+SGTO 1449.3 (stops at iteration 1), extended SGTO 1457.8 with max
+overload reduced 2607 -> 1841 kW; the accepted improvements at
+iterations 2/4/6/9 were all reached via perturbation restarts. At
+budget 5000 the instance is effectively saturated: aggressive search
+and an independent SA both fail to beat SGTO's solution, so method
+differences there are small by nature; the main-table experiments
+should include at least one larger-budget setting.
+
 ## Known calibration items (still open)
 
 - Risk-aware and risk-neutral SGTO still find the same solution at
@@ -102,8 +170,13 @@ evaluation never see training days.
   the empty-solution baseline, or tighter grid scenarios.
 - Weight sweep over (alpha, beta, gamma, eta, budget) for the operating
   point of the main table; the ablation list in the paper covers these.
-- Missing baselines: genetic algorithm, simulated annealing, original
-  static GTO, and a MILP reference for small instances. The Solver
-  interface in algorithms/base.py is ready.
+- Missing baselines: genetic algorithm, original static GTO, and a
+  MILP reference for small instances (simulated annealing done). The
+  Solver interface in algorithms/base.py is ready.
+- Synergy is near zero in optimized solutions (0-2 pairs): adjacency
+  is a stricter condition than the paper's same-route-within-D_max.
+  Building explicit corridors (shortest paths through the adjacency
+  graph, or OSMnx arterials) would revive the Y term; this changes the
+  route definition, so it is a modeling decision to make deliberately.
 - Routes currently use zone adjacency; swap in OSMnx corridors if
   reviewers want literal road routes.

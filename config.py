@@ -109,7 +109,7 @@ class ScenarioConfig:
 class AlgoConfig:
     """SGTO and baseline hyperparameters."""
 
-    budget: float = 5000.0     # B, cost units (= 5M USD); forces level tradeoffs
+    budget: float = 100000.0     # B, cost units (= 5M USD); forces level tradeoffs
     max_iters: int = 20        # K
     n_sampled: int = 8         # m, scenarios sampled per iteration
     eps: float = 1e-3          # epsilon, minimum improvement
@@ -117,6 +117,13 @@ class AlgoConfig:
     # patience = 1 is the paper's rule (stop on first rejection); higher
     # values resample scenarios and retry, keeping the best-so-far X_k.
     patience: int = 3
+    # On rejection, perturb the incumbent (iterated local search): drop
+    # a random fraction of elements and greedily respend the budget.
+    # Set to 0.0 to disable and recover plain resampling.
+    perturb_frac: float = 0.34
+    # After the loop, run one local-exchange polish on the full training
+    # scenario set, accepted through the same validation gate.
+    final_polish: bool = True
     exchange_max_passes: int = 3
     seed: int = 42
 
