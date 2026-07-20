@@ -18,6 +18,49 @@ python run_experiment.py --quick            # smoke test, ~2 min
 Optional extras: `pip install pandapower` for `--grid ieee33`,
 `pip install osmnx` for `--roads osmnx`.
 
+## Tables and figures
+
+Two companion tools aggregate `results_*.json` into paper-ready output:
+
+```bash
+# LaTeX tables: single run / mean+-std over seeds / parameter sweep
+python make_tables.py table results/urbanev/results_main.json
+python make_tables.py seeds results/urbanev/results_main.json \
+    results/urbanev/results_rho_seed*.json --methods sgto sgto_risk_neutral
+python make_tables.py sweep "results/urbanev/results_rho[0-9]*.json" --param rho --methods sgto
+
+# Figures (.pdf + .png): method bars / sweep curves / SGTO convergence
+python make_plots.py methods results/urbanev/results_main.json -o figures
+python make_plots.py sweep "results/urbanev/results_rho[0-9]*.json" --param rho --methods sgto -o figures
+python make_plots.py sweep "results/paris/results_growth*.json" --param demand_growth \
+    --methods cost_aware_greedy sgto sgto_risk_neutral -o figures
+python make_plots.py history results/urbanev/results_main.json --methods sgto -o figures
+```
+
+Caveat: `F_rob` / `F_rob_gain` are computed with each run's own rho and are
+NOT comparable across a rho sweep; both tools default to rho-independent
+metrics (`F_mean`, `CVaR_loss`, overload, cost) in sweep mode. If an older
+result file lacks the sweep parameter in `_config`, the value is recovered
+from the file name (`results_growth3.json` -> 3). `make_plots.py` needs
+matplotlib.
+
+## Running the full suite
+
+`run_all.sh` bundles every experiment (main tables, ablations,
+calibration) into named stages:
+
+```bash
+bash run_all.sh                 # everything (several hours)
+bash run_all.sh main            # only the dataset x grid main tables
+bash run_all.sh main weights    # a subset of stages
+QUICK=1 bash run_all.sh         # smoke test, shrinks every run
+bash run_all.sh --list          # list stage names
+```
+
+Stages: `setup main rho_seeds weights paris_calib rho_sweep`. Override
+`SEEDS`, `GROWTHS`, `RHOS`, or `PY` (interpreter) via environment
+variables. Failures in one run are logged and the suite continues.
+
 ## Running experiments
 
 ```bash
