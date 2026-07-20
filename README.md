@@ -1,30 +1,54 @@
-# SGTO Experiment: EV Charging Station Planning on UrbanEV (Shenzhen)
+# SGTO Experiment: Risk-Aware EV Charging Station Planning
 
 Code for the experiments of the risk-aware, scenario-based facility
 location paper. Implements the full model (coverage, synergy, grid
 penalty, unmet demand, CVaR) and the SGTO algorithm plus baselines,
-on the UrbanEV Shenzhen dataset.
+on two instances: UrbanEV (Shenzhen, primary) and Smarter Mobility
+(Paris Belib', secondary).
 
 ## Setup
 
 ```bash
-pip install numpy pandas
-git clone --depth 1 https://github.com/IntelligentSystemsLab/UrbanEV.git
+pip install -r requirements.txt             # numpy + pandas
+python setup_data.py urbanev                # fetch UrbanEV -> UrbanEV/data
+python setup_data.py paris                  # fetch Paris -> smarter-mobility/data
 python run_experiment.py --quick            # smoke test, ~2 min
-python run_experiment.py                    # full run
-python run_experiment.py --methods sgto cost_aware_greedy
 ```
 
-Results land in `results/results.json` with metrics, solution
-(zone id, level) lists, and SGTO iteration history.
+Optional extras: `pip install pandapower` for `--grid ieee33`,
+`pip install osmnx` for `--roads osmnx`.
+
+## Running experiments
+
+```bash
+python run_experiment.py                              # UrbanEV, all methods
+python run_experiment.py --dataset paris              # Paris instance
+python run_experiment.py --grid ieee33                # IEEE 33-bus grid
+python run_experiment.py --dataset paris --roads osmnx
+python run_experiment.py --methods sgto cost_aware_greedy
+python run_experiment.py --budget 50000 --rho 0.5 --seed 7
+python run_experiment.py --list                       # datasets and methods
+python run_experiment.py --tag rho05 --rho 0.5        # results_rho05.json
+```
+
+Flags override per-dataset defaults (data dir, budget, split date), and
+`--quick` shrinks scenario counts and iterations for a fast pipeline
+check. Results land in `results/<dataset>/results.json` with the run
+config, metrics, solution (zone id, level) lists, and SGTO iteration
+history.
 
 ## Structure
 
 ```
 config.py                  all assumptions and hyperparameters in one place
 data_processing/
+  registry.py              dataset name -> loader + per-dataset defaults
+  common.py                shared load curve, haversine, SyntheticGrid
   urbanev.py               loads UrbanEV csvs, builds the ProblemInstance
+  paris.py                 loads Smarter Mobility train.csv (Belib')
   scenarios.py             builds train/val/test scenario sets from real days
+  grid_ieee33.py           IEEE 33-bus grid provider (pandapower)
+  roads_osmnx.py           cached OSM road distance matrices (optional)
 model/
   instance.py              ProblemInstance and Scenario dataclasses
   reward.py                F_omega, CVaR, F_rob, IncrementalState (fast gains)
@@ -37,10 +61,12 @@ algorithms/
   random_search.py         random feasible baseline
 metrics.py                 all paper metrics on held-out test scenarios
 run_experiment.py          entry point
+setup_data.py              one-command dataset download
 ```
 
-Algorithms only see a `ProblemInstance`, never raw files, so adding the
-Paris instance later means writing one new loader.
+Algorithms only see a `ProblemInstance`, never raw files. Adding a
+dataset = one loader module exposing `build_instance(cfg)` plus one
+entry in `data_processing/registry.py`.
 
 ## Mapping data to the model
 
@@ -52,7 +78,7 @@ Paris instance later means writing one new loader.
 | d_u,t | hourly charging volume (kWh), one scenario = one day, T=24 |
 | coverage a_u,e | exp decay of road distance (distance.csv) x level factor |
 | synergy pairs | adjacent zones (adj.csv) within D_max road distance |
-| grid regions Z (9) | district groups from TAZID prefix |
+| grid regions Z (11) | district groups, TAZID // 100 |
 | scenarios | real weekday/weekend/peak days + grid-cut and surge perturbations |
 
 Train scenarios come from days before 2023-01-15; validation and test
@@ -180,3 +206,33 @@ should include at least one larger-budget setting.
   route definition, so it is a modeling decision to make deliberately.
 - Routes currently use zone adjacency; swap in OSMnx corridors if
   reviewers want literal road routes.
+
+## Mapping the Paris instance
+
+| Model object | Smarter Mobility source |
+|---|---|
+| demand regions U (91) | Belib' stations (each station is a zone) |
+| ground set E (273) | stations x 3 station-scale levels (registry.py) |
+| d_u,t | hourly mean #Charging plugs x plug_power_kw (kWh), T=24 |
+| coverage a_u,e | exp decay of road distance x level factor |
+| road distance | OSMnx if enabled/cached, else great-circle x 1.3 |
+| grid regions Z | arrondissements (Postcode), fallback: challenge areas |
+| scenarios | real days split at 2020-12-01 |
+
+Stated assumptions: occupancy-to-energy conversion via a single average
+plug power (`ParisConfig.plug_power_kw`), detour-factor road distances
+unless OSMnx is used, and pandemic-period demand (2020-2021), which is
+why Paris is the secondary generalization instance.
+
+## Grid models
+
+`--grid synthetic` (default) keeps the stated assumption
+g = margin x (peak background + reference station load).
+`--grid ieee33` derives district limits from the IEEE 33-bus test
+system via pandapower: load buses are partitioned along the feeder in
+proportion to district demand, and each district capacity is its
+voltage-constrained hosting capacity (largest load multiplier keeping
+min bus voltage >= `ieee33_vmin` = 0.90 pu; line ratings in case33bw
+are placeholders, so voltage is the binding limit). Headroom varies
+roughly 1.4x to 25x with feeder position, giving topology-driven
+heterogeneity the synthetic model lacks.

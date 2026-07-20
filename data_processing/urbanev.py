@@ -35,13 +35,9 @@ from config import ExperimentConfig
 from model.instance import ProblemInstance
 
 
-# Standard normalized daily load curve (fraction of daily peak per hour),
-# shape based on typical urban distribution feeders: overnight trough,
-# morning ramp, evening peak.
-DAILY_LOAD_SHAPE = np.array([
-    0.55, 0.50, 0.47, 0.45, 0.45, 0.48, 0.56, 0.68, 0.78, 0.82, 0.84, 0.85,
-    0.84, 0.83, 0.82, 0.83, 0.86, 0.92, 1.00, 0.98, 0.92, 0.82, 0.70, 0.60,
-])
+# Re-exported for backward compatibility; the shared curve and the grid
+# providers now live in data_processing/common.py.
+from data_processing.common import DAILY_LOAD_SHAPE  # noqa: F401
 
 
 class UrbanEVData:
@@ -89,6 +85,7 @@ class UrbanEVData:
 
 def build_instance(cfg: ExperimentConfig) -> ProblemInstance:
     from data_processing.scenarios import build_scenarios  # avoid cycle
+    from data_processing.common import make_grid_provider
 
     raw = UrbanEVData(cfg.data_dir)
     n_zones = raw.n_zones
@@ -133,8 +130,9 @@ def build_instance(cfg: ExperimentConfig) -> ProblemInstance:
     w_t[list(m.peak_hours)] = m.w_peak
 
     # ---- scenarios --------------------------------------------------------
+    provider = make_grid_provider(cfg.grid_model, raw, cfg)
     scen_train, scen_val, scen_test = build_scenarios(
-        raw, grid_of_zone, n_grid, cfg)
+        raw, grid_of_zone, n_grid, cfg, grid_provider=provider)
 
     return ProblemInstance(
         n_zones=n_zones, zone_of=zone_of, level_of=level_of,

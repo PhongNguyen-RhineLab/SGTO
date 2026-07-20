@@ -64,6 +64,10 @@ class ModelConfig:
     kappa: float = 1.0
     d_max_km: float = 10.0
 
+    # IEEE 33-bus grid provider: min bus voltage (pu) defining the
+    # voltage-constrained hosting capacity (only used with --grid ieee33)
+    ieee33_vmin: float = 0.90
+
     # Grid: g_{z,t} = grid_margin * (background peak + reference station load)
     # where reference load assumes grid_ref_frac of a district's zones get
     # a medium build. Together these control how tight the grid is.
@@ -129,9 +133,35 @@ class AlgoConfig:
 
 
 @dataclass
+class ParisConfig:
+    """Assumptions specific to the Smarter Mobility (Paris Belib') data.
+
+    The raw data is plug OCCUPANCY (Available/Charging/Passive/Other
+    counts per station every 15 min), not energy. Demand is derived as
+    d_{u,t} = mean(#Charging over the hour) * plug_power_kw, in kWh.
+    """
+
+    train_csv: str = "train.csv"     # relative to data_dir
+    plug_power_kw: float = 7.4       # avg AC power per occupied plug
+    detour_factor: float = 1.3       # road dist ~ detour * great-circle
+    adjacency_km: float = 1.5        # stations closer than this are adjacent
+    district_by: str = "postcode"    # "postcode" (arrondissement) | "area"
+    max_gap_hours: int = 3           # interpolate occupancy gaps up to this
+    min_day_coverage: float = 1.0    # keep only fully observed days
+
+
+@dataclass
 class ExperimentConfig:
+    # Which dataset/loader to use: "urbanev" | "paris"
+    dataset: str = "urbanev"
+    # Grid model: "synthetic" | "ieee33" (pandapower IEEE 33-bus)
+    grid_model: str = "synthetic"
+    # Road distances: "auto" (dataset file or OSMnx, fallback geodesic),
+    # "osmnx" (strict), "geodesic" (haversine * detour factor)
+    roads: str = "auto"
     data_dir: str = "UrbanEV/data"
     out_dir: str = "results"
+    paris: ParisConfig = field(default_factory=ParisConfig)
     # Economies of scale: kW per cost unit rises with level
     # (AC level-2 heavy "small" vs DC-fast heavy "large"):
     # small 70 kW / 60 = 1.17, medium 450/300 = 1.5, large 2400/900 = 2.67
