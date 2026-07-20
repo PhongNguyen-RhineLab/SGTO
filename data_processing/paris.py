@@ -73,7 +73,10 @@ class ParisData:
                  .sort_index())
         occ = occ.resample("1h").mean()
         occ = occ.interpolate(limit=pc.max_gap_hours, limit_area="inside")
-        self.volume = occ * pc.plug_power_kw          # (time, U) kWh per hour
+        # demand_growth: plan for projected adoption above the observed
+        # (pandemic-period) utilization; a stated assumption.
+        self.volume = (occ * pc.plug_power_kw
+                       * pc.demand_growth)           # (time, U) kWh per hour
         self._min_day_coverage = pc.min_day_coverage
 
         # ---- road distances --------------------------------------------
@@ -111,7 +114,13 @@ class ParisData:
         """Grid region per station: arrondissement (Postcode) or area."""
         m = self._meta
         if self._district_by == "postcode" and "Postcode" in m.columns:
-            keys = m["Postcode"].astype(str).str.strip().tolist()
+            pc = m["Postcode"]
+            # stations with a missing postcode fall back to their area
+            # (a NaN would otherwise become its own spurious district)
+            if pc.isna().any() and "area" in m.columns:
+                pc = pc.fillna("area_" + m["area"].astype(str))
+            keys = pc.astype(str).str.strip().str.replace(
+                r"\.0$", "", regex=True).tolist()
         elif "area" in m.columns:
             keys = m["area"].astype(str).tolist()
         else:

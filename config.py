@@ -129,6 +129,10 @@ class AlgoConfig:
     # scenario set, accepted through the same validation gate.
     final_polish: bool = True
     exchange_max_passes: int = 3
+    # Use the risk-aware objective inside the semi-gradient weights (so
+    # the modular knapsack optimizes the same criterion the validation
+    # gate enforces). False = mean-only weights, the original behavior.
+    risk_in_weights: bool = True
     seed: int = 42
 
 
@@ -143,6 +147,7 @@ class ParisConfig:
 
     train_csv: str = "train.csv"     # relative to data_dir
     plug_power_kw: float = 7.4       # avg AC power per occupied plug
+    demand_growth: float = 1.0       # scale demand (EV adoption growth)
     detour_factor: float = 1.3       # road dist ~ detour * great-circle
     adjacency_km: float = 1.5        # stations closer than this are adjacent
     district_by: str = "postcode"    # "postcode" (arrondissement) | "area"

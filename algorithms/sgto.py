@@ -138,15 +138,21 @@ class SGTO(Solver):
             idx = rng.choice(len(inst.scen_train), size=m, replace=False)
             omega_k = [inst.scen_train[i] for i in idx]
 
-            # 2. semi-gradient weights at X_cur
+            # 2. semi-gradient weights at X_cur. The weights use the
+            # SAME objective as the validation gate (risk-aware when the
+            # solver is risk-aware): mean-only weights propose solutions
+            # that the risk-aware gate then vetoes, which empirically
+            # collapses the modular phase to a no-op. risk_in_weights
+            # False restores the mean-only weights for the ablation.
+            ra_w = self.risk_aware and getattr(cfg, "risk_in_weights", True)
             state = IncrementalState(rm, omega_k, X=X_cur)
             w = np.empty(inst.n_elements)
             for e in range(inst.n_elements):
                 if e in X_cur:
-                    w[e] = state.gain_remove(e, risk_aware=False)
+                    w[e] = state.gain_remove(e, risk_aware=ra_w)
                 else:
-                    w[e] = state.gain_add(e, risk_aware=False)
-                counter[0] += 2 * m
+                    w[e] = state.gain_add(e, risk_aware=ra_w)
+                counter[0] += 2 * m * (2 if ra_w else 1)
 
             # 3. modular knapsack
             X_tilde = solve_modular_knapsack(inst, w)

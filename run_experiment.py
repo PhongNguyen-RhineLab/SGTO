@@ -86,6 +86,15 @@ def parse_args():
                    help="risk aversion weight (default: config)")
     g.add_argument("--seed", type=int, default=None,
                    help="seed for scenarios AND algorithms")
+    g.add_argument("--algo-seed", type=int, default=None,
+                   help="algorithm seed only (scenarios stay fixed); "
+                        "use for multi-seed ablations on one test set")
+    g.add_argument("--no-risk-in-weights", action="store_true",
+                   help="mean-only semi-gradient weights "
+                        "(original behavior, for the ablation)")
+    g.add_argument("--demand-growth", type=float, default=None,
+                   help="paris only: scale demand by this factor "
+                        "(EV adoption growth assumption)")
     g.add_argument("--n-train", type=int, default=None)
     g.add_argument("--n-val", type=int, default=None)
     g.add_argument("--n-test", type=int, default=None)
@@ -124,6 +133,12 @@ def build_config(args) -> ExperimentConfig:
     if args.seed is not None:
         cfg.scenarios.seed = args.seed
         cfg.algo.seed = args.seed
+    if args.algo_seed is not None:
+        cfg.algo.seed = args.algo_seed
+    if args.no_risk_in_weights:
+        cfg.algo.risk_in_weights = False
+    if args.demand_growth is not None:
+        cfg.paris.demand_growth = args.demand_growth
     for k in ("n_train", "n_val", "n_test"):
         v = getattr(args, k)
         if v is not None:
@@ -168,6 +183,8 @@ def main():
         "dataset": cfg.dataset, "grid_model": cfg.grid_model,
         "roads": cfg.roads, "budget": cfg.algo.budget,
         "rho": cfg.model.rho, "seed": cfg.algo.seed,
+        "scenario_seed": cfg.scenarios.seed,
+        "risk_in_weights": cfg.algo.risk_in_weights,
         "split_date": cfg.scenarios.split_date,
     }}
     for name, mk in make_solvers(inst, rm, cfg, args.methods).items():
