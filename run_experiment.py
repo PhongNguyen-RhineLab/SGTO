@@ -183,6 +183,7 @@ def main():
         "dataset": cfg.dataset, "grid_model": cfg.grid_model,
         "roads": cfg.roads, "budget": cfg.algo.budget,
         "rho": cfg.model.rho, "seed": cfg.algo.seed,
+        "demand_growth": cfg.paris.demand_growth,
         "scenario_seed": cfg.scenarios.seed,
         "risk_in_weights": cfg.algo.risk_in_weights,
         "split_date": cfg.scenarios.split_date,
