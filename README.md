@@ -12,6 +12,12 @@ corridor synergy, grid overload penalty, unmet-demand penalty and a CVaR risk
 term), the SGTO algorithm, three baselines, and the scripts that produce every
 table in the paper.
 
+The appendix of the paper is in [`paper/SGTO_Appendix.pdf`](paper/SGTO_Appendix.pdf).
+It contains the extended related work, the closure properties (P1)-(P3) and the
+CVaR variational form used in the analysis, the curvature analysis of each term of
+the global reward and why the BP structure does not extend to `F_rob`, and the
+additional experiments (Table 3: budget sweep, Table 4: enlarged 32-day test set).
+
 A Vietnamese walkthrough of the code is in [`Instruction_vn.md`](Instruction_vn.md).
 
 ---
@@ -77,8 +83,8 @@ python review_analyze.py         # prints every table and the statistical tests
 | Table 1 (main results) | all four methods at `B = 100,000`; SA and SGTO over 10 algorithm seeds (42, 1 to 9), greedy baselines once (deterministic) |
 | Paired tests in Section 4 | per-scenario rewards on an enlarged held-out set of 32 test days, paired bootstrap and Wilcoxon test |
 | Table 2 (ablation) | SGTO with one component removed, 5 seeds (42, 1 to 4) |
-| Table 3 (budget sweep) | `B` in {20k, 30k, 40k}; SA and SGTO over 3 seeds |
-| Table 4 (enlarged test set) | the Table 1 plans re-evaluated on 32 test days |
+| Table 3 (budget sweep, appendix) | `B` in {20k, 30k, 40k}; SA and SGTO over 3 seeds |
+| Table 4 (enlarged test set, appendix) | the Table 1 plans re-evaluated on 32 test days |
 
 The scenario split is fixed (scenario seed 42); only the algorithm seed varies.
 Raw results are appended to `results/review/runs.jsonl` (one JSON record per
@@ -198,6 +204,8 @@ model/
   instance.py              ProblemInstance and Scenario
   reward.py                F_omega, CVaR, F_rob, vectorized incremental gains
   reward_reference.py      slow reference implementation used for testing
+paper/
+  SGTO_Appendix.pdf    appendix of the paper (proofs and additional experiments)
 algorithms/
   greedy.py                cost-aware greedy and greedy fill
   local_search.py          one-exchange, drop-and-refill, greedy + exchange baseline
