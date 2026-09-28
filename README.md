@@ -1,281 +1,244 @@
-# SGTO Experiment: Risk-Aware EV Charging Station Planning
+# SGTO: Risk-Aware EV Charging Station Planning
 
-Code for the experiments of the risk-aware, scenario-based facility
-location paper. Implements the full model (coverage, synergy, grid
-penalty, unmet demand, CVaR) and the SGTO algorithm plus baselines,
-on two instances: UrbanEV (Shenzhen, primary) and Smarter Mobility
-(Paris Belib', secondary).
+Code and experiments for the paper
 
-## Setup
+> **Time-Aware and Risk-Aware Electric Vehicle Charging Station Planning via
+> Scenario-Based Global Trajectory Optimization**
+> Phong T.D. Nguyen, Dung T.K. Ha, Thai V. Nguyen, Uyen T. Nguyen, Doan T. Hoang.
+> CSoNet 2026 (Springer LNCS).
 
-```bash
-pip install -r requirements.txt             # numpy + pandas
-python setup_data.py urbanev                # fetch UrbanEV -> UrbanEV/data
-python setup_data.py paris                  # fetch Paris -> smarter-mobility/data
-python run_experiment.py --quick            # smoke test, ~2 min
+The repository implements the planning model (time-dependent coverage,
+corridor synergy, grid overload penalty, unmet-demand penalty and a CVaR risk
+term), the SGTO algorithm, three baselines, and the scripts that produce every
+table in the paper.
+
+A Vietnamese walkthrough of the code is in [`Instruction_vn.md`](Instruction_vn.md).
+
+---
+
+## Problem in one paragraph
+
+Choose where to build EV charging stations and at which capacity level
+(small / medium / large), at most one level per location, under an investment
+budget. A plan is scored on a set of daily demand and grid scenarios by
+
+```
+F_w(X)  = alpha*C_w(X) + beta*Y(X) - gamma*P_w(X) - eta*U_w(X)
+F_rob(X) = E_w[F_w(X)] - rho * CVaR_delta( gamma*P_w(X) + eta*U_w(X) )
 ```
 
-Optional extras: `pip install pandapower` for `--grid ieee33`,
-`pip install osmnx` for `--roads osmnx`.
+where `C` is probabilistic demand coverage (submodular), `Y` rewards adjacent
+station pairs that form a corridor (supermodular), `P` is a quadratic grid
+overload penalty and `U` is unmet demand. The expected part is a BP
+(submodular + supermodular) function; the CVaR term breaks that structure, so
+SGTO is a BP-inspired heuristic with no approximation guarantee. Improvement is
+enforced by a validation gate on held-out scenarios.
 
-## Tables and figures
+## SGTO in five steps
 
-Two companion tools aggregate `results_*.json` into paper-ready output:
+1. **Initialization**: best of a gain-per-cost greedy and a pure-gain greedy.
+2. **Scenario-based semi-gradient**: sample `m` training scenarios and compute
+   modular weights from the robust estimate of `F_rob`.
+3. **Modular knapsack**: maximize the weights under the budget and the
+   one-level-per-location constraint (exact dynamic programming).
+4. **Local exchange**: add, swap and re-level moves, plus one drop-and-refill
+   pass that respends freed budget greedily.
+5. **Validation gate and restarts**: accept a candidate only if it improves the
+   validation objective; after a rejection, perturb the incumbent (drop a
+   fraction `pi` of stations, refill greedily) and retry, stopping after `R`
+   consecutive rejections. A final exchange polish runs on the full training pool.
 
-```bash
-# LaTeX tables: single run / mean+-std over seeds / parameter sweep
-python make_tables.py table results/urbanev/results_main.json
-python make_tables.py seeds results/urbanev/results_main.json \
-    results/urbanev/results_rho_seed*.json --methods sgto sgto_risk_neutral
-python make_tables.py sweep "results/urbanev/results_rho[0-9]*.json" --param rho --methods sgto
+---
 
-# Figures (.pdf + .png): method bars / sweep curves / SGTO convergence
-python make_plots.py methods results/urbanev/results_main.json -o figures
-python make_plots.py sweep "results/urbanev/results_rho[0-9]*.json" --param rho --methods sgto -o figures
-python make_plots.py sweep "results/paris/results_growth*.json" --param demand_growth \
-    --methods cost_aware_greedy sgto sgto_risk_neutral -o figures
-python make_plots.py history results/urbanev/results_main.json --methods sgto -o figures
-```
+## Quick start
 
-Caveat: `F_rob` / `F_rob_gain` are computed with each run's own rho and are
-NOT comparable across a rho sweep; both tools default to rho-independent
-metrics (`F_mean`, `CVaR_loss`, overload, cost) in sweep mode. If an older
-result file lacks the sweep parameter in `_config`, the value is recovered
-from the file name (`results_growth3.json` -> 3). `make_plots.py` needs
-matplotlib.
-
-## Running the full suite
-
-`run_all.sh` bundles every experiment (main tables, ablations,
-calibration) into named stages:
+Requirements: Python 3.10+, `numpy`, `pandas`. No GPU is needed.
 
 ```bash
-bash run_all.sh                 # everything (several hours)
-bash run_all.sh main            # only the dataset x grid main tables
-bash run_all.sh main weights    # a subset of stages
-QUICK=1 bash run_all.sh         # smoke test, shrinks every run
-bash run_all.sh --list          # list stage names
+pip install -r requirements.txt
+python setup_data.py urbanev          # clones UrbanEV into UrbanEV/data
+python run_experiment.py --quick      # smoke test, about 2 minutes
 ```
 
-Stages: `setup main rho_seeds weights paris_calib rho_sweep`. Override
-`SEEDS`, `GROWTHS`, `RHOS`, or `PY` (interpreter) via environment
-variables. Failures in one run are logged and the suite continues.
+Optional extras: `matplotlib` for `make_plots.py`, `pandapower` for
+`--grid ieee33`, `osmnx` for `--roads osmnx`.
 
-## Running experiments
+## Reproducing the paper
+
+All numbers in Tables 1 to 4 of the paper come from one driver script:
+
+```bash
+python review_runs.py            # 66 runs, resumable; NPROC=2 by default
+python review_analyze.py         # prints every table and the statistical tests
+```
+
+| Paper element | What `review_runs.py` runs |
+|---|---|
+| Table 1 (main results) | all four methods at `B = 100,000`; SA and SGTO over 10 algorithm seeds (42, 1 to 9), greedy baselines once (deterministic) |
+| Paired tests in Section 4 | per-scenario rewards on an enlarged held-out set of 32 test days, paired bootstrap and Wilcoxon test |
+| Table 2 (ablation) | SGTO with one component removed, 5 seeds (42, 1 to 4) |
+| Table 3 (budget sweep) | `B` in {20k, 30k, 40k}; SA and SGTO over 3 seeds |
+| Table 4 (enlarged test set) | the Table 1 plans re-evaluated on 32 test days |
+
+The scenario split is fixed (scenario seed 42); only the algorithm seed varies.
+Raw results are appended to `results/review/runs.jsonl` (one JSON record per
+run, including the selected plan and per-scenario rewards and losses), and the
+script skips runs that are already recorded, so it can be stopped and resumed.
+The full suite takes about 70 minutes of wall time on 2 cores; set `NPROC` to
+use more.
+
+## Running single experiments
 
 ```bash
 python run_experiment.py                              # UrbanEV, all methods
-python run_experiment.py --dataset paris              # Paris instance
-python run_experiment.py --grid ieee33                # IEEE 33-bus grid
-python run_experiment.py --dataset paris --roads osmnx
 python run_experiment.py --methods sgto cost_aware_greedy
-python run_experiment.py --budget 50000 --rho 0.5 --seed 7
+python run_experiment.py --budget 30000 --rho 0.5
+python run_experiment.py --algo-seed 3                # vary the algorithm only
+python run_experiment.py --n-test 40                  # larger held-out test set
+python run_experiment.py --no-risk-in-weights         # mean-only semi-gradient
+python run_experiment.py --dataset paris              # secondary instance
 python run_experiment.py --list                       # datasets and methods
-python run_experiment.py --tag rho05 --rho 0.5        # results_rho05.json
 ```
 
-Flags override per-dataset defaults (data dir, budget, split date), and
-`--quick` shrinks scenario counts and iterations for a fast pipeline
-check. Results land in `results/<dataset>/results.json` with the run
-config, metrics, solution (zone id, level) lists, and SGTO iteration
-history.
+`--seed` changes both the scenario split and the algorithm; `--algo-seed` keeps
+the scenarios fixed. Results are written to `results/<dataset>/results[_<tag>].json`
+with the configuration, test metrics, the selected plan as (zone, level) pairs,
+and the SGTO iteration history.
 
-## Structure
+Methods: `cost_aware_greedy`, `greedy_one_exchange`, `simulated_annealing`,
+`random_search`, `sgto`, and the variants `sgto_no_exchange` and
+`sgto_risk_neutral`.
+
+### Ablation switches
+
+All SGTO settings live in `AlgoConfig` in `config.py`. The defaults are the
+full method used in the paper.
+
+| Field | Default | Effect |
+|---|---|---|
+| `max_iters` (K) | 20 | outer iterations |
+| `n_sampled` (m) | 8 | scenarios sampled per iteration |
+| `eps` | 1e-3 | minimum improvement for any acceptance |
+| `patience` (R) | 3 | consecutive validation rejections before stopping |
+| `perturb_frac` (pi) | 0.34 | fraction of the incumbent dropped on a restart; 0 disables restarts |
+| `exchange_max_passes` | 3 | local-exchange passes per iteration |
+| `final_polish` | True | exchange pass on the full training pool at the end |
+| `risk_in_weights` | True | robust (True) or mean-only (False) semi-gradient weights |
+| `k_drop` | 2 | elements tried by drop-and-refill; 0 disables it |
+| `use_knapsack` | True | False skips the semi-gradient and knapsack step |
+
+`patience=1, perturb_frac=0` recovers the terminate-on-first-rejection rule.
+
+---
+
+## Instance and parameters (UrbanEV, Shenzhen)
+
+| Model object | Source or value |
+|---|---|
+| Demand regions and candidates | 275 traffic zones, green-field (`volume.csv`) |
+| Ground set | 275 zones x 3 levels = 825 configurations |
+| Capacity levels | small 10 x 7 kW, medium 15 x 30 kW, large 20 x 120 kW |
+| Level costs | 60 / 300 / 900 cost units (1 unit ~ USD 1000) |
+| Budget | `B = 100,000` |
+| Demand `d_{u,t}` | hourly charging volume (kWh), one scenario = one day, T = 24 |
+| Coverage kernel | `exp(-dist / 2 km)`, truncated at 5 km road distance (`distance.csv`) |
+| Level service factors `sigma_l` | 0.5 / 0.75 / 0.95 |
+| Congestion saturation | `min(1, zeta_bar * q_e / att(i))`, `zeta_bar = 0.45`, training demand only |
+| Utilization profile | city demand shape rescaled to [0.15, 0.75] |
+| Synergy | `kappa = 1` per adjacent zone pair (`adj.csv`) within `D_max = 10 km` |
+| Grid districts | 11, from `TAZID // 100` |
+| Grid capacity | synthetic: `g = 1.05 x (peak background + reference load)`, reference = medium builds in 8% of a district's zones |
+| Time weights | peak hours (7-9, 17-19) weight 1.5, otherwise 1.0 |
+| Reward weights | `alpha = 1, beta = 0.5, gamma = 1, eta = 2` |
+| Risk | `rho = 0.3`, `delta = 0.9` |
+| Scenarios | 20 train (before 2023-01-15), 8 validation, 12 test (after); weekday / weekend / peak / perturbed mix |
+| Perturbations | grid headroom x 0.7, or demand x 1.3 in one district |
+
+Validation and test days are disjoint from training days, and from each other.
+
+### Stated assumptions
+
+1. Grid capacity is synthetic (see the table). An IEEE 33-bus provider is
+   available with `--grid ieee33` (requires `pandapower`).
+2. Level costs are literature ballparks for installed chargers.
+3. Effective capacity aggregates additively across stations before the demand
+   cap, `s = min(d, nu * zeta_t * sum_e a_{u,e} q_e)`, which keeps the
+   unmet-demand term supermodular.
+4. Reported `F_rob_gain` is `F_rob(X) - F_rob(empty plan)`, since the unmet
+   demand of building nothing makes raw `F_rob` a large negative constant.
+
+### Secondary instance (Paris Belib')
+
+`--dataset paris` builds a 91-station instance from the Smarter Mobility data
+challenge (`python setup_data.py paris`), with demand from hourly plug
+occupancy and grid regions from arrondissements. It is not used in the paper.
+
+---
+
+## Repository layout
 
 ```
-config.py                  all assumptions and hyperparameters in one place
+config.py                  every model, scenario and algorithm parameter
+setup_data.py              dataset download (git clone)
+run_experiment.py          single-run entry point
+review_runs.py             reproduces all paper tables (multi-seed, ablation, budget)
+review_analyze.py          aggregates runs.jsonl into tables and statistical tests
+run_all.sh                 older staged suite (rho and weight sweeps, Paris calibration)
+make_tables.py             LaTeX tables from results_*.json
+make_plots.py              figures from results_*.json
+metrics.py                 test-set metrics (gain, worst case, CVaR, FR, synergy, cost)
 data_processing/
-  registry.py              dataset name -> loader + per-dataset defaults
-  common.py                shared load curve, haversine, SyntheticGrid
-  urbanev.py               loads UrbanEV csvs, builds the ProblemInstance
-  paris.py                 loads Smarter Mobility train.csv (Belib')
-  scenarios.py             builds train/val/test scenario sets from real days
-  grid_ieee33.py           IEEE 33-bus grid provider (pandapower)
-  roads_osmnx.py           cached OSM road distance matrices (optional)
+  registry.py              dataset name -> loader and defaults
+  urbanev.py, paris.py     instance builders
+  scenarios.py             train / validation / test scenario sampling
+  common.py                load curve, synthetic grid
+  grid_ieee33.py           IEEE 33-bus grid provider (optional)
+  roads_osmnx.py           OSM road distances (optional)
 model/
-  instance.py              ProblemInstance and Scenario dataclasses
-  reward.py                F_omega, CVaR, F_rob, IncrementalState (fast gains)
+  instance.py              ProblemInstance and Scenario
+  reward.py                F_omega, CVaR, F_rob, vectorized incremental gains
+  reward_reference.py      slow reference implementation used for testing
 algorithms/
-  base.py                  Solver interface, SolveResult
-  greedy.py                cost-aware greedy (also SGTO initializer)
-  local_search.py          one-exchange improvement, greedy+exchange baseline
-  sgto.py                  full SGTO: semi-gradient, modular knapsack DP,
-                           exchange, validation acceptance; ablation flags
-  random_search.py         random feasible baseline
-metrics.py                 all paper metrics on held-out test scenarios
-run_experiment.py          entry point
-setup_data.py              one-command dataset download
+  greedy.py                cost-aware greedy and greedy fill
+  local_search.py          one-exchange, drop-and-refill, greedy + exchange baseline
+  annealing.py             simulated annealing baseline
+  random_search.py         random feasible plans
+  sgto.py                  SGTO
+results/review/            raw runs and summary behind the paper tables
 ```
 
-Algorithms only see a `ProblemInstance`, never raw files. Adding a
-dataset = one loader module exposing `build_instance(cfg)` plus one
-entry in `data_processing/registry.py`.
+Algorithms only see a `ProblemInstance`. Adding a dataset means one loader
+exposing `build_instance(cfg)` and one entry in `data_processing/registry.py`.
 
-## Mapping data to the model
+## Known limitations
 
-| Model object | UrbanEV source |
-|---|---|
-| demand regions U (275) | volume.csv columns (traffic zones) |
-| candidates V | same zones, green-field planning |
-| ground set E (825) | zones x 3 capacity levels (config.py) |
-| d_u,t | hourly charging volume (kWh), one scenario = one day, T=24 |
-| coverage a_u,e | exp decay of road distance (distance.csv) x level factor |
-| synergy pairs | adjacent zones (adj.csv) within D_max road distance |
-| grid regions Z (11) | district groups, TAZID // 100 |
-| scenarios | real weekday/weekend/peak days + grid-cut and surge perturbations |
+- Grid capacities are synthetic, so the case study tests the algorithm under a
+  plausible grid proxy rather than giving an infrastructure recommendation.
+- There is no exact or relaxation-based reference solution.
+- The ablation shows the gain over the baselines comes mainly from the
+  validation-gated perturbation restarts; the knapsack phase and
+  drop-and-refill have effects within seed-to-seed noise on this instance.
+- When the budget binds (B <= 40,000), SGTO ties greedy with one exchange.
 
-Train scenarios come from days before 2023-01-15; validation and test
-from disjoint later days, so validation-based acceptance and final
-evaluation never see training days.
+## Citation
 
-## Stated assumptions (to cite in the paper)
+```bibtex
+@inproceedings{nguyen2026sgto,
+  title     = {Time-Aware and Risk-Aware Electric Vehicle Charging Station
+               Planning via Scenario-Based Global Trajectory Optimization},
+  author    = {Nguyen, Phong T.D. and Ha, Dung T.K. and Nguyen, Thai V. and
+               Nguyen, Uyen T. and Hoang, Doan T.},
+  booktitle = {Computational Data and Social Networks (CSoNet 2026)},
+  series    = {Lecture Notes in Computer Science},
+  publisher = {Springer},
+  year      = {2026}
+}
+```
 
-1. Grid capacity is synthetic: background load per district follows a
-   standard daily feeder curve scaled to district charging demand, and
-   g_z,t = margin x (peak background + reference station load). Replace
-   with IEEE 33-bus via pandapower later; hooks are in scenarios.py.
-2. Costs per level use literature ballparks (config.py CapacityLevelConfig,
-   1 unit = 1000 USD). Needs a citation row in the dataset table.
-3. Served demand s_u,t = min(d, serve_eff x zeta_t x sum a_ue q_e),
-   which satisfies the submodularity assumption (Assumption 1) of the
-   theory section.
-4. Utilization zeta_t follows the city demand shape rescaled to
-   [zeta_min, zeta_max].
+The UrbanEV data is from Li et al., *UrbanEV: An open benchmark dataset for
+urban electric vehicle charging demand prediction*, Scientific Data 12, 523
+(2025); cite it if you use the instance.
 
-## Fixed after the first full run (session 2)
+## License
 
-- Gridcut scenarios now scale headroom above background load instead of
-  total capacity. The old rule created overload that existed even with
-  zero stations, a constant loss that made the CVaR term unable to
-  discriminate between solutions (risk-aware == risk-neutral).
-- Effectiveness a_{u,e} is now congestion-aware (use_congestion in
-  config): scaled by min(1, zeta_bar q_e / attracted demand), computed
-  from training-period demand only. This implements the paper's
-  "expected station congestion" dependency and makes the capacity-level
-  choice non-degenerate: large builds appear in dense zones, small in
-  sparse ones. Level economics also updated to reflect economies of
-  scale (kW per cost unit rises with level).
-- District mapping fixed: TAZID // 100 (11 districts), not the first
-  character (which merged zone 1011 into district 1).
-- SGTO acceptance has a patience parameter (default 3 rejections;
-  patience=1 recovers the paper's stop-on-first-rejection rule). If
-  keeping patience > 1, add one sentence to the algorithm section.
-- Metrics report F_rob_gain = F_rob(X) - F_rob(empty), since unserved
-  baseline demand makes raw F_rob a large negative constant.
-
-## Algorithm and performance upgrades (session 3)
-
-- Dual-rule greedy: runs benefit-to-cost AND pure-gain greedy, keeps
-  the better (guards against the known failure mode of ratio greedy
-  with heterogeneous costs; carries the classic budgeted-max-coverage
-  style guarantee).
-- Local exchange gained a drop-and-refill move: drop one of the k=3
-  weakest elements and greedily respend the freed budget, covering
-  1-to-many trades that single exchanges cannot express.
-- SGTO is now iterated local search: on validation rejection it
-  perturbs the incumbent (drop perturb_frac of elements, greedy refill)
-  instead of terminating, tracks the best-so-far validated solution,
-  and finishes with a local-exchange polish on the full training set.
-  patience=1, perturb_frac=0, final_polish=False recovers the paper's
-  Algorithm 1 exactly; if the extensions are kept, the algorithm
-  section needs a short paragraph.
-- Simulated annealing baseline implemented (algorithms/annealing.py).
-- Evaluator rewritten (model/reward.py): scenario tensors are stacked
-  and marginal gains use component deltas on slices (a candidate only
-  touches its own grid region and the ~18 zones it covers). ~6-7x
-  faster per gain, verified bit-identical to the reference
-  implementation kept in model/reward_reference.py. End to end: full
-  SGTO 53s -> 9.5s, and budget-12000 runs that previously timed out
-  finish in under a minute.
-
-## Optimality evidence at the default operating point
-
-At budget 5000 the instance appears ceiling-bound: aggressive SGTO
-(40 iters, 50 percent perturbation, patience 12) and a 12000-move SA
-run from random init both fail to beat the same solution SGTO finds in
-10 seconds (val -3393.95). The greedy -> SGTO gap (gain 689 -> 736,
-+6.9 percent) is the headline comparison. At budget 12000 SGTO
-additionally cuts max grid overload from 2607 to 1841 kW vs greedy.
-
-## Algorithm upgrades (session 3)
-
-- Vectorized reward evaluation: scenario data is stacked into tensors
-  in IncrementalState (coverage collapses to one (M,U) product since
-  w_t and demand factor out of the solution term). ~6x faster per
-  marginal gain, bit-identical to the reference implementation kept in
-  model/reward_reference.py. This is what makes larger budgets (more
-  stations, bigger neighborhoods) tractable.
-- Dual-rule greedy: best of ratio-greedy and gain-greedy (classic fix
-  for the budgeted-coverage failure mode of the pure ratio rule).
-- Drop-and-refill move in local exchange: one-exchange cannot trade one
-  expensive element for several cheap ones; dropping the weakest
-  elements and greedily respending the budget covers 1-to-many moves.
-  Runs once after the exchange passes converge (running it inside every
-  pass made large budgets intractable).
-- SGTO is now iterated local search: on validation rejection it
-  perturbs the incumbent (drop perturb_frac of elements, greedy refill)
-  instead of terminating, tracks the best-so-far validated solution,
-  and optionally polishes on the full train set at the end. Setting
-  patience=1, perturb_frac=0, final_polish=False recovers the paper's
-  Algorithm 1 exactly; if the extensions are kept, the algorithm
-  section needs a short paragraph describing them.
-- Simulated annealing baseline implemented (algorithms/annealing.py);
-  also used as an independent check.
-
-Evidence at budget 12000 (single seed): greedy gain 1446.2, paper-rule
-SGTO 1449.3 (stops at iteration 1), extended SGTO 1457.8 with max
-overload reduced 2607 -> 1841 kW; the accepted improvements at
-iterations 2/4/6/9 were all reached via perturbation restarts. At
-budget 5000 the instance is effectively saturated: aggressive search
-and an independent SA both fail to beat SGTO's solution, so method
-differences there are small by nature; the main-table experiments
-should include at least one larger-budget setting.
-
-## Known calibration items (still open)
-
-- Risk-aware and risk-neutral SGTO still find the same solution at
-  rho=0.3: the CVaR is dominated by the unavoidable unmet-demand mass,
-  so the rho ablation needs either larger rho, a loss defined net of
-  the empty-solution baseline, or tighter grid scenarios.
-- Weight sweep over (alpha, beta, gamma, eta, budget) for the operating
-  point of the main table; the ablation list in the paper covers these.
-- Missing baselines: genetic algorithm, original static GTO, and a
-  MILP reference for small instances (simulated annealing done). The
-  Solver interface in algorithms/base.py is ready.
-- Synergy is near zero in optimized solutions (0-2 pairs): adjacency
-  is a stricter condition than the paper's same-route-within-D_max.
-  Building explicit corridors (shortest paths through the adjacency
-  graph, or OSMnx arterials) would revive the Y term; this changes the
-  route definition, so it is a modeling decision to make deliberately.
-- Routes currently use zone adjacency; swap in OSMnx corridors if
-  reviewers want literal road routes.
-
-## Mapping the Paris instance
-
-| Model object | Smarter Mobility source |
-|---|---|
-| demand regions U (91) | Belib' stations (each station is a zone) |
-| ground set E (273) | stations x 3 station-scale levels (registry.py) |
-| d_u,t | hourly mean #Charging plugs x plug_power_kw (kWh), T=24 |
-| coverage a_u,e | exp decay of road distance x level factor |
-| road distance | OSMnx if enabled/cached, else great-circle x 1.3 |
-| grid regions Z | arrondissements (Postcode), fallback: challenge areas |
-| scenarios | real days split at 2020-12-01 |
-
-Stated assumptions: occupancy-to-energy conversion via a single average
-plug power (`ParisConfig.plug_power_kw`), detour-factor road distances
-unless OSMnx is used, and pandemic-period demand (2020-2021), which is
-why Paris is the secondary generalization instance.
-
-## Grid models
-
-`--grid synthetic` (default) keeps the stated assumption
-g = margin x (peak background + reference station load).
-`--grid ieee33` derives district limits from the IEEE 33-bus test
-system via pandapower: load buses are partitioned along the feeder in
-proportion to district demand, and each district capacity is its
-voltage-constrained hosting capacity (largest load multiplier keeping
-min bus voltage >= `ieee33_vmin` = 0.90 pu; line ratings in case33bw
-are placeholders, so voltage is the binding limit). Headroom varies
-roughly 1.4x to 25x with feeder position, giving topology-driven
-heterogeneity the synthetic model lacks.
+MIT, see [`LICENSE`](LICENSE).
