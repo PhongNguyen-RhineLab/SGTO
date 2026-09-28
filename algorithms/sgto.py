@@ -144,25 +144,29 @@ class SGTO(Solver):
             # that the risk-aware gate then vetoes, which empirically
             # collapses the modular phase to a no-op. risk_in_weights
             # False restores the mean-only weights for the ablation.
-            ra_w = self.risk_aware and getattr(cfg, "risk_in_weights", True)
-            state = IncrementalState(rm, omega_k, X=X_cur)
-            w = np.empty(inst.n_elements)
-            for e in range(inst.n_elements):
-                if e in X_cur:
-                    w[e] = state.gain_remove(e, risk_aware=ra_w)
-                else:
-                    w[e] = state.gain_add(e, risk_aware=ra_w)
-                counter[0] += 2 * m * (2 if ra_w else 1)
+            if getattr(cfg, "use_knapsack", True):
+                ra_w = self.risk_aware and getattr(cfg, "risk_in_weights", True)
+                state = IncrementalState(rm, omega_k, X=X_cur)
+                w = np.empty(inst.n_elements)
+                for e in range(inst.n_elements):
+                    if e in X_cur:
+                        w[e] = state.gain_remove(e, risk_aware=ra_w)
+                    else:
+                        w[e] = state.gain_add(e, risk_aware=ra_w)
+                    counter[0] += 2 * m * (2 if ra_w else 1)
 
-            # 3. modular knapsack
-            X_tilde = solve_modular_knapsack(inst, w)
+                # 3. modular knapsack
+                X_tilde = solve_modular_knapsack(inst, w)
+            else:
+                X_tilde = set(X_cur)
 
             # 4. local exchange on the training sample
             if self.use_exchange:
                 X_hat = local_exchange(inst, rm, X_tilde, omega_k,
                                        eps=cfg.eps,
                                        max_passes=cfg.exchange_max_passes,
-                                       counter=counter)
+                                       counter=counter,
+                                       k_drop=getattr(cfg, "k_drop", 2))
             else:
                 X_hat = X_tilde
 
@@ -187,7 +191,8 @@ class SGTO(Solver):
         if getattr(cfg, "final_polish", False) and self.use_exchange:
             X_pol = local_exchange(inst, rm, X_best, inst.scen_train,
                                    eps=cfg.eps, max_passes=1,
-                                   counter=counter)
+                                   counter=counter,
+                                   k_drop=getattr(cfg, "k_drop", 2))
             f_pol = self._f_val(X_pol)
             history.append({"iter": "polish", "f_val": f_pol,
                             "accepted": f_pol > f_best + cfg.eps,

@@ -18,7 +18,7 @@ from model.reward import IncrementalState
 
 
 def local_exchange(inst, rm, X: set, scenarios, eps: float,
-                   max_passes: int = 3, counter=None) -> set:
+                   max_passes: int = 3, counter=None, k_drop: int = 2) -> set:
     state = IncrementalState(rm, scenarios, X=X)
     E = inst.n_elements
 
@@ -79,8 +79,8 @@ def local_exchange(inst, rm, X: set, scenarios, eps: float,
     # the k weakest elements by removal gain, to bound cost (running it
     # inside every pass made large-budget instances intractable).
     from algorithms.greedy import greedy_fill  # local import, no cycle
-    k_worst = 2
-    if state.X:
+    k_worst = k_drop
+    if state.X and k_worst > 0:
         rem_gain = {e: state.gain_remove(e) for e in state.X}
         if counter is not None:
             counter[0] += 3 * len(scenarios) * len(state.X)

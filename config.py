@@ -133,6 +133,12 @@ class AlgoConfig:
     # the modular knapsack optimizes the same criterion the validation
     # gate enforces). False = mean-only weights, the original behavior.
     risk_in_weights: bool = True
+    # Ablation switches (defaults = full SGTO).
+    # k_drop: elements tried by the drop-and-refill move (0 disables it).
+    # use_knapsack: False skips the semi-gradient + modular knapsack step,
+    #   so each iteration runs local exchange directly from X_cur.
+    k_drop: int = 2
+    use_knapsack: bool = True
     seed: int = 42
 
 
